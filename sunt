@@ -1,0 +1,227 @@
+#!/bin/bash
+# by TUVIMEN <suchora.dominik7@gmail.com>
+# License: GNU GPLv3
+
+IFS=$'\n'
+
+die() {
+    exit_code="$1"
+    shift
+    echo "$@" > /dev/stderr
+    exit "$exit_code"
+}
+
+usage() {
+    NAME="$(basename "$0")"
+    printf "%s [COMMAND] [OPTION]... [FILE]\ncreate and manage file backups through ssh\n\n" "$NAME"
+    printf "Commands:\n  l, list\t\tprints out index file\n"
+    printf "  a, add\t\tadds files to index\n"
+    printf "  d, delete\t\tdeletes files from index, leaving files intact\n"
+    printf "  i, index\t\tuploads index file to the remote\n"
+    printf "  u, upload\t\tuploads files to the remote\n"
+    printf "  au, add-upload\tadds files to database and uploads them to the remote\n"
+    printf "  r, restore\t\trestores files from the remote\n\n"
+    printf "Options:\n  -f\tallow overwriting files\n"
+    printf "  -a\taffect every file in index (only for upload and restore)\n"
+    printf "  -c\tadd compress flag (only for add)\n\n"
+    printf "Variables:\n  SUNT_INDEX\t\tlocation of index file\n"
+    printf "  SUNT_ENCRYPT\t\tcommand used for encrypting\n"
+    printf "  SUNT_DECRYPT\t\tcommand used for decrypting\n"
+    printf "  SUNT_COMPRESS\t\tcommand used for compression\n"
+    printf "  SUNT_DECOMPRESS\tcommand used for decompression\n"
+    printf "  SUNT_HASH\t\tcommand used for translating file names\n"
+    printf "  SUNT_PATH\t\tpath under which every file in index should be under\n"
+    printf "  SUNT_DEST\t\tpath to the remote, in scp command fashion\n\n"
+    printf "By default %s tries to read variables from ~/.config/sunt file\n" "$NAME"
+    exit 0
+}
+
+file_check() {
+    options="$1"
+    shift
+    while [ "$#" -gt 0 ]
+    do
+        for i in $(echo "$options" | sed 's/\(.\)/\1\n/g')
+        do
+            case "$i" in 
+                e) #does not exists then exit
+                    [ -e "$1" ] || die 1 "$1 does not exits";;
+                E) #does not exists then create
+                    if [ ! -e "$1" ]
+                    then
+                        touch "$1" || exit 1
+                        echo "created $1"
+                    fi;;
+                f) #is a file
+                    [ -f "$1" ] || die 1 "$1 is not a file";;
+                d) #is a directory
+                    [ -d "$1" ] || die 1 "$1 is not a directory";;
+                p) #is a named pipe
+                    [ -p "$1" ] || die 1 "$1 is not a named pipe";;
+                h) #is a named link
+                    [ -h "$1" ] || die 1 "$1 is not a named link";;
+                S) #is a socket
+                    [ -S "$1" ] || die 1 "$1 is not a socket";;
+                s) #is empty
+                    [ -s "$1" ] || die 1 "$1 is empty";;
+                r) #read access
+                    [ -r "$1" ] || die 1 "$1 reading permission denied";;
+                w) #write access
+                    [ -w "$1" ] || die 1 "$1 writing permission denied";;
+                x) #exution access
+                    [ -x "$1" ] || die 1 "$1 executing permission denied";;
+            esac
+        done
+        shift
+    done
+}
+
+var_by_name() {
+    eval "echo \"\$$1\""
+}
+
+var_check() {
+    while [ "$#" -gt 0 ]
+    do
+        val="$(var_by_name "$1")"
+        [ -z "$val" ] && die 1 "$1 is not set"
+        shift
+    done
+}
+
+varfile_check() {
+    options="$1"
+    shift
+    [ $# -eq 0 ] && return
+    while [ "$#" -gt 0 ]
+    do
+        val="$(var_by_name "$1")"
+        [ -z "$val" ] && die 1 "$1 is not set"
+        file_check "$options" "$val"
+        shift
+    done
+}
+
+f_list() {
+    cat "$SUNT_INDEX"
+}
+
+f_add() {
+    while [ "$#" -gt 0 ]
+    do
+        file_check 'erw' "$1"
+        if realpath "$1" | grep -q "^$SUNT_PATH/"
+        then
+            name="$(realpath "$1" | sed "s#^$SUNT_PATH/##")"
+            name_hash="$(echo -n "$name" | $SUNT_HASH | sed 's/ .*//')"
+            [ -d "$1" ] && dir=1 || \
+                [ -f "$1" ] || { echo "$1 is not a file or directory" >/dev/stderr; shift; continue; }
+            [ -n "$dir" ] && options="d" || options="f"
+            [ -n "$compress" ] && options="${options}c"
+            [ -z "$force" ] && grep -q '^'"$name_hash;" "$SUNT_INDEX" && { echo "$1 is already declared" >/dev/stderr; shift; continue; }
+            sed -i "/^$name_hash;/d" "$SUNT_INDEX"
+            echo "$name_hash;$name;$options" >> "$SUNT_INDEX" && echo "added $1"
+        else
+            echo "$1 is not in $SUNT_PATH aka SUNT_PATH"
+        fi
+        shift
+    done
+}
+
+f_delete() {
+    while [ "$#" -gt 0 ]
+    do
+        name="$(realpath "$1" | sed "s#^$SUNT_PATH/##")"
+        name_hash="$(echo -n "$name" | $SUNT_HASH | sed 's/ .*//')"
+        grep -q '^'"$name_hash;" "$SUNT_INDEX" || echo "$1 not found" && \
+        sed -i "/^$name_hash;/d" "$SUNT_INDEX"
+        shift
+    done
+}
+
+f_restore() {
+    while [ "$#" -gt 0 ]
+    do
+        name="$(realpath "$1" | sed "s#^$SUNT_PATH/##")"
+        name_hash="$(echo -n "$name" | $SUNT_HASH | sed 's/ .*//')"
+        line="$(grep '^'"$name_hash;" "$SUNT_INDEX")"
+        [ -z "$line" ] && { echo "$1 not found" >/dev/stderr; shift; continue; }
+        [ -z "$force" ] && [ -e "$1" ] && { echo "$1 already exists" >/dev/stderr; shift; continue; }
+        ssh "$ssh_con" "[ -e \"$ssh_path/$name_hash\" ]" && { echo "$1 not found in storage" >/dev/stderr; shift; continue; }
+        com="ssh \"$ssh_con\" \"cat $ssh_path/$name_hash\" | $SUNT_DECRYPT"
+        case "$(echo "$line" | cut -d';' -f3)" in
+            f) eval "$com > \"$SYNT_PATH/$name\"";;
+            fc) eval "$com | $SUNT_DECOMPRESS > \"$SYNT_PATH/$name\"";;
+            d) eval "$com | tar -C \"\$(dirname \"$SUNT_PATH/$name\")\" -x";;
+            dc) eval "$com | $SUNT_DECOMPRESS | tar -C \"\$(dirname \"$SUNT_PATH/$name\")\" -x";;
+        esac
+        shift
+    done
+}
+
+f_upload() {
+    while [ "$#" -gt 0 ]
+    do
+        name="$(realpath "$1" | sed "s#^$SUNT_PATH/##")"
+        name_hash="$(echo -n "$name" | $SUNT_HASH | sed 's/ .*//')"
+        line="$(grep '^'"$name_hash;" "$SUNT_INDEX")"
+        [ -z "$line" ] && { echo "$1 not found" >/dev/stderr; shift; continue; }
+        [ -z "$force" ] && ssh "$ssh_con" "[ -e \"$ssh_path/$name_hash\" ]" && { echo "$1 already exists" >/dev/stderr; shift; continue; }
+        case "$(echo "$line" | cut -d';' -f3)" in
+            f) com="cat \"$SUNT_PATH/$name\"";;
+            fc) com="cat \"$SUNT_PATH/$name\" | $SUNT_COMPRESS";;
+            d) com="tar -c -C \"\$(dirname \"$SUNT_PATH/$name\")\" \"\$(basename \"$name\")\"";;
+            dc) com="tar -c -C \"\$(dirname \"$SUNT_PATH/$name\")\" \"\$(basename \"$name\")\" | $SUNT_COMPRESS";;
+        esac
+        eval "$com | $SUNT_ENCRYPT | ssh \"$ssh_con\" \"cat > $ssh_path/$name_hash\"" && echo "uploaded $1"
+        shift
+    done
+}
+
+f_au() {
+    f_add "$@"
+    f_upload "$@"
+}
+
+f_index() {
+    eval "cat \"$SUNT_INDEX\" | $SUNT_COMPRESS | $SUNT_ENCRYPT | ssh \"$ssh_con\" \"cat > $ssh_path/index.gpg\""
+}
+
+. ~/.config/sunt &>/dev/null
+
+varfile_check 'Efrw' SUNT_INDEX
+var_check SUNT_ENCRYPT SUNT_DECRYPT SUNT_COMPRESS SUNT_DECOMPRESS SUNT_HASH SUNT_PATH SUNT_DEST
+
+[ "$#" -eq 0 ] && usage
+case "$1" in
+    u|upload) func="f_upload";;
+    a|add) func="f_add";;
+    au|add-upload) func="f_au";;
+    r|restore) func="f_restore";;
+    d|delete) func="f_delete";;
+    l|list) func="f_list";;
+    i|index) func="f_index";;
+esac
+[ -z "$func" ] && die 1 "$1 incorrect command"
+shift
+
+while [ "$#" -gt 0 ]  && echo "$1" | grep -q '^-'
+do
+    case "$(echo "$1" | sed 's/^-//; s/\(.\).*/\1/')" in
+        f) force=1;;
+        a) all=1;;
+        c) compress=1;;
+    esac
+    shift
+done
+
+echo "$SUNT_DEST" | grep -q ':' || die 1 "$SUNT_DEST incorrect address"
+ssh_con="$(echo "$SUNT_DEST" | cut -d: -f1)"
+ssh_path="$(echo "$SUNT_DEST" | cut -d: -f2)"
+
+if [ -n "$all" ] && [ "$func" = "f_upload" -o "$func" = "f_restore" ]
+then
+    $func "$(cut -d';' -f2 < "$SUNT_INDEX" | sed 's,^,'"$SUNT_PATH/"',')"
+else
+    $func "$@"
+fi
