@@ -23,7 +23,7 @@ usage() {
     printf "  r, restore\t\trestores files from the remote\n\n"
     printf "Options:\n  -f\tallow overwriting files\n"
     printf "  -a\taffect every file in index (only for upload and restore)\n"
-    printf "  -r\ndelete files on remote\n"
+    printf "  -r\tdelete files on remote\n"
     printf "  -c\tadd compress flag (only for add)\n\n"
     printf "Variables:\n  SUNT_INDEX\t\tlocation of index file\n"
     printf "  SUNT_ENCRYPT\t\tcommand used for encrypting\n"
