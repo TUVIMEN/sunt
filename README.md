@@ -27,9 +27,9 @@ Upload files to remote
 
     sunt u file2 file3
 
-Delete files from index
+Delete files from index and on remote
     
-    sunt d file3
+    sunt d -r file3
 
 Copy index file to remote
 
