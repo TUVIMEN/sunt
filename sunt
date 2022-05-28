@@ -149,7 +149,7 @@ f_restore() {
         line="$(grep '^'"$name_hash;" "$SUNT_INDEX")"
         [ -z "$line" ] && { echo "$1 not found" >/dev/stderr; shift; continue; }
         [ -z "$force" ] && [ -e "$1" ] && { echo "$1 already exists" >/dev/stderr; shift; continue; }
-        ssh "$ssh_con" "[ -e \"$ssh_path/$name_hash\" ]" && { echo "$1 not found in storage" >/dev/stderr; shift; continue; }
+        ssh "$ssh_con" "[ -e \"$ssh_path/$name_hash\" ]" || { echo "$1 not found in storage" >/dev/stderr; shift; continue; }
         com="ssh \"$ssh_con\" \"cat $ssh_path/$name_hash\" | $SUNT_DECRYPT"
         case "$(echo "$line" | cut -d';' -f3)" in
             f) eval "$com > \"$SYNT_PATH/$name\"";;
