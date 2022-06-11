@@ -1,7 +1,7 @@
 # sunt
 A bash script for backing up files.
 
-## Instalation
+## Installation
     install -m 755 sunt /usr/bin
 
 ## Usage
