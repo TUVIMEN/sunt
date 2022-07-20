@@ -152,8 +152,8 @@ f_restore() {
         ssh "$ssh_con" "[ -e \"$ssh_path/$name_hash\" ]" || { echo "$1 not found in storage" >/dev/stderr; shift; continue; }
         com="ssh \"$ssh_con\" \"cat $ssh_path/$name_hash\" | $SUNT_DECRYPT"
         case "$(echo "$line" | cut -d';' -f3)" in
-            f) eval "$com > \"$SYNT_PATH/$name\"";;
-            fc) eval "$com | $SUNT_DECOMPRESS > \"$SYNT_PATH/$name\"";;
+            f) eval "$com > \"$SUNT_PATH/$name\"";;
+            fc) eval "$com | $SUNT_DECOMPRESS > \"$SUNT_PATH/$name\"";;
             d) eval "$com | tar -C \"\$(dirname \"$SUNT_PATH/$name\")\" -x";;
             dc) eval "$com | $SUNT_DECOMPRESS | tar -C \"\$(dirname \"$SUNT_PATH/$name\")\" -x";;
         esac
