@@ -9,9 +9,9 @@ A bash script for backing up files.
 
 Example config of ~/.config/sunt
 
-    SUNT_INDEX="/home/user/index"
-    SUNT_ENCRYPT="gpg -c --cipher-algo AES256 -z 0 --batch --passphrase-file /home/user/pass"
-    SUNT_DECRYPT="gpg -d --batch --passphrase-file /home/user/pass"
+    SUNT_INDEX="/home/user3/index"
+    SUNT_ENCRYPT="gpg -c --cipher-algo AES256 -z 0 --batch --passphrase-file /home/user3/pass"
+    SUNT_DECRYPT="gpg -d --batch --passphrase-file /home/user3/pass"
     SUNT_COMPRESS="xz -e9"
     SUNT_DECOMPRESS="unxz"
     SUNT_HASH="md5sum"

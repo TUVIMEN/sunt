@@ -5,7 +5,7 @@
 IFS=$'\n'
 shopt -s extglob
 
-declare force all onremote compress destination_length file_path id
+declare force onremote compress destination_length file_path id
 declare -a destination
 
 die() {
@@ -26,7 +26,6 @@ usage() {
     printf "  au, add-upload\tadds files to database and uploads them to the remote\n"
     printf "  r, restore\t\trestores files from the remote\n\n"
     printf "Options:\n  -f\tallow overwriting files\n"
-    printf "  -a\taffect every file in index (only for upload and restore)\n"
     printf "  -r\tdelete files on remote\n"
     printf "  -c\tadd compress flag (only for add)\n\n"
     printf "Variables:\n  SUNT_INDEX\t\tlocation of index file\n"
@@ -236,11 +235,10 @@ esac
 [ -z "$func" ] && die 1 "$1 incorrect command"
 shift
 
-while getopts 'farc' o
+while getopts 'frc' o
 do
     case "$o" in
         f) force='1';;
-        a) all='1';;
         r) onremote='1';;
         c) compress='1';;
         *) usage;;
@@ -252,10 +250,4 @@ mapfile -t -d, destination <<< "$SUNT_DEST"
 [ "$((${#destination[@]}%4))" -ne '0' ] && die 1 "invalid SUNT_DEST"
 destination_length="${#destination[@]}"
 
-#if [ -n "$all" ] && [ "$func" = "f_upload" -o "$func" = "f_restore" ]
-#then
-#    $func "$(cut -d';' -f2 < "$SUNT_INDEX" | sed 's,^,'"$SUNT_PATH/"',')"
-#else
-#    $func "$@"
-#fi
 $func "$@"
