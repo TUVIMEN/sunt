@@ -1,4 +1,5 @@
 # sunt
+
 A bash script for backing up files.
 
 ## Installation
@@ -14,8 +15,7 @@ Example config of ~/.config/sunt
     SUNT_COMPRESS="xz -e9"
     SUNT_DECOMPRESS="unxz"
     SUNT_HASH="md5sum"
-    SUNT_PATH="/media/sdb1"
-    SUNT_DEST="user@192.168.1.104:/media/sdc1"
+    SUNT_DEST="user1,ssh user1@192.168.1.104,/media/sdc1,/home/user3/d1,user2,ssh user2@192.168.1.105,/media/sdc2,/home/user3/d2"
 
 Add files to index
 
