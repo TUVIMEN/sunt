@@ -175,9 +175,21 @@ f_restore() {
         com="${destination[id+1]//$'\n'} \"cat ${destination[id+2]//$'\n'}/$name_hash\" | $SUNT_DECRYPT"
         case "$(cut -d $'\t' -f4 <<< "$line")" in
             f) eval "$com > \"${destination[id+3]//$'\n'}/$file_path\"";;
-            fc) eval "$com | $SUNT_DECOMPRESS > \"${destination[id+3]//$'\n'}/$file_path\"";;
+            fc)
+                if [ -n "$compress" ]
+                then
+                    eval "$com > \"${destination[id+3]//$'\n'}/$file_path\"";
+                else
+                    eval "$com | $SUNT_DECOMPRESS > \"${destination[id+3]//$'\n'}/$file_path\"";
+                fi;;
             d) eval "$com | tar -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" -x";;
-            dc) eval "$com | $SUNT_DECOMPRESS | tar -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" -x";;
+            dc)
+                if [ -n "$compress" ]
+                then
+                    eval "$com > \"${destination[id+3]//$'\n'}/$file_path\"";
+                else
+                    eval "$com | $SUNT_DECOMPRESS | tar -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" -x";
+                fi;;
         esac
         shift
     done
@@ -196,9 +208,21 @@ f_upload() {
         [ -z "$force" ] &&  eval "${destination[id+1]//$'\n'} \"[ -e \"${destination[id+2]//$'\n'}/$name_hash\" ]\"" && { echo "$1 already exists" >/dev/stderr; shift; continue; }
         case "$(cut -d $'\t' -f4 <<< "$line")" in
             f) com="cat \"${destination[id+3]//$'\n'}/$file_path\"";;
-            fc) com="cat \"${destination[id+3]//$'\n'}/$file_path\" | $SUNT_COMPRESS";;
+            fc)
+                if [ -n "$compress" -a -n "$force" ]
+                then
+                    com="cat \"${destination[id+3]//$'\n'}/$file_path\"";
+                else
+                    com="cat \"${destination[id+3]//$'\n'}/$file_path\" | $SUNT_COMPRESS";
+                fi;;
             d) com="tar -c -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" \"\$(basename \"$file_path\")\"";;
-            dc) com="tar -c -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" \"\$(basename \"$file_path\")\" | $SUNT_COMPRESS";;
+            dc)
+                if [ -n "$compress" -a -n "$force" ]
+                then
+                    com="tar -c -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" \"\$(basename \"$file_path\")\"";
+                else
+                    com="tar -c -C \"\$(dirname \"${destination[id+3]//$'\n'}/$file_path\")\" \"\$(basename \"$file_path\")\" | $SUNT_COMPRESS";
+                fi;;
         esac
         eval "$com | $SUNT_ENCRYPT | ${destination[id+1]//$'\n'} \"cat > ${destination[id+2]//$'\n'}/$name_hash\"" && echo "uploaded $1"
         shift
@@ -231,6 +255,8 @@ case "$1" in
     d|delete) func="f_delete";;
     l|list) func="f_list";;
     i|index) func="f_index";;
+    v|verify) fun="f_verify";;
+    m|move) fun="f_move";;
 esac
 [ -z "$func" ] && die 1 "$1 incorrect command"
 shift
