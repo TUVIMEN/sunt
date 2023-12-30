@@ -237,7 +237,7 @@ f_au() {
 f_index() {
     for ((i=0;i<destination_length;i+=4))
     do
-        eval "$SUNT_COMPRESS < \"$SUNT_INDEX\" | $SUNT_ENCRYPT | ${destination[i+1]//$'\n'} \"cat > ${destination[i+2]//$'\n'}/index.gpg\""
+        eval "$SUNT_COMPRESS < \"$SUNT_INDEX\" | $SUNT_ENCRYPT | ${destination[i+1]//$'\n'} \"cat > ${destination[i+2]//$'\n'}/index.enc\""
     done
 }
 
