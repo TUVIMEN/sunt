@@ -46,7 +46,7 @@ file_check() {
     do
         for i in $(sed 's/\(.\)/\1\n/g' <<< "$options")
         do
-            case "$i" in 
+            case "$i" in
                 e) #does not exists then exit
                     [ -e "$1" ] || die 1 "$1 does not exits";;
                 E) #does not exists then create
@@ -127,7 +127,7 @@ f_add() {
     do
         file_check 'erw' "$1"
         find_path "$1"
-        [ -z "$id" ] && { echo "$1 is not in $SUNT_DEST aka SUNT_DEST" >/dev/stderr; shift continue; }
+        [ -z "$id" ] && { echo "$1 is not in $SUNT_DEST aka SUNT_DEST" >/dev/stderr; shift; continue; }
         t="$(echo -n "$file_path" | $SUNT_HASH)"
         name_hash="${t%% *}"
         [ -d "$1" ] && dir=1 || \
