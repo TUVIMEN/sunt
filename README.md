@@ -10,11 +10,11 @@ A bash script for backing up files.
 Example config of ~/.config/sunt
 
     SUNT_INDEX="/home/user3/index"
-    SUNT_ENCRYPT="gpg -c --cipher-algo AES256 -z 0 --batch --passphrase-file /home/user3/pass"
-    SUNT_DECRYPT="gpg -d --batch --passphrase-file /home/user3/pass"
+    SUNT_ENCRYPT="openssl enc -e -aes-256-cbc -salt -pbkdf2 -iter 1000000 -md sha512 -in /dev/stdin -pass file/home/user3/pass -out /dev/stdout"
+    SUNT_DECRYPT="openssl enc -d -aes-256-cbc -salt -pbkdf2 -iter 1000000 -md sha512 -in /dev/stdin -pass file:/ome/user3/pass -out /dev/stdout"
     SUNT_COMPRESS="xz -e9"
     SUNT_DECOMPRESS="unxz"
-    SUNT_HASH="md5sum"
+    SUNT_HASH="sha256sum"
     SUNT_DEST="user1,ssh user1@192.168.1.104,/media/sdc1,/home/user3/d1,user2,ssh user2@192.168.1.105,/media/sdc2,/home/user3/d2"
 
 Add files to index
@@ -28,7 +28,7 @@ Upload files to remote
     sunt u file2 file3
 
 Delete files from index and on remote
-    
+
     sunt d -r file3
 
 Copy index file to remote
