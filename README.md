@@ -2,6 +2,8 @@
 
 A bash script for backing up files.
 
+My reasoning behind this project: https://tuvimen.neocities.org/posts/secure-and-quick-backup-of-huge-amount-of-files-via-ssh
+
 ## Installation
 
 ```bash
