@@ -48,6 +48,7 @@ Copy index file to remote
 
 ```bash
 sunt i
+```
 
 Add and upload files
 
