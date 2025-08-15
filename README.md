@@ -68,3 +68,30 @@ Show index file
 ```bash
 sunt l
 ```
+
+## Wrapper
+
+Here's a command wrapper for `.bashrc` that when called with no arguments spawns `fzf` selection to restore files
+
+```bash
+sunt() {
+    if [ "$#" -eq 0 ]
+    then
+        . ~/.config/sunt
+        local destination path sel
+
+        mapfile -t -d, destination <<< "$SUNT_DEST"
+        [ "$((${#destination[@]}%4))" -ne '0' ] && {
+            echo "invalid SUNT_DEST" >&2
+            exit 1
+        }
+        path="${destination[3]//$'\n'}"
+        sel="$(cut -f2 "$SUNT_INDEX" | fzf -i --multi)"
+        [ -z "$sel" ] && return
+        local IFS=$'\n'
+        command sunt r $(sed "s#^#$path/#" <<< "$sel")
+    else
+        command sunt "$@"
+    fi
+}
+```
